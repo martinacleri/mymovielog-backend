@@ -2,6 +2,8 @@ const { Sequelize } = require('sequelize');
 const { applyExtraSetup } = require('./extra-setup');
 require('dotenv').config();
 
+console.log("DB_CONNECTION_URL:", process.env.DB_CONNECTION_URL);
+
 const sequelize = new Sequelize(process.env.DB_CONNECTION_URL, {
     logQueryParameters: true,
     benchmark: true
