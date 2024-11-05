@@ -1,6 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { authenticateToken } = require('./middlewares/auth.middleware');
+const authRoutes = require('./routes/auth');
+const cors = require('cors');
 
 const routes = {
 	auth: require('./routes/auth'),
@@ -13,8 +15,12 @@ const routes = {
 
 const app = express();
 
+app.use(cors());
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use('/api/auth', authRoutes);
 
 function makeHandlerAwareOfAsyncErrors(handler) {
 	return async function (req, res, next) {
