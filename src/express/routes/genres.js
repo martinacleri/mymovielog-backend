@@ -1,51 +1,37 @@
+const express = require('express');
 const { models } = require('../../sequelize');
 const { getIdParam } = require('../helpers');
+const router = express.Router();
 
-async function getAll(req, res) {
-    try {
-        const genres = await models.genre.findAll();
-        res.status(200).json(genres);
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching genres', details: error.message });
-    }
-}
+router.get('/getGenres', async (req, res) => {
+    const genres = await models.genre.findAll();
+    res.status(200).json(genres);
+});
 
-async function getById(req, res) {
+router.get('/getGenre/:id', async (req, res) => {
     const id = getIdParam(req);
-    try {
-        const genre = await models.genre.findByPk(id);
-        if (genre) {
-            res.status(200).json(genre);
-        } else {
-            res.status(404).json({ error: 'Genre not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching genre', details: error.message });
+    const genre = await models.genre.findByPk(id);
+    if (genre) {
+        res.status(200).json(genre);
+    } else {
+        res.status(404).json({ error: 'No se encontró el género.' });
     }
-}
+});
 
-async function listMovies(req, res) {
+router.get('/getMoviesByGenre/:id/movies', async (req, res) => {
     const genreId = getIdParam(req);
-    try {
-        const genre = await models.genre.findByPk(genreId, {
-            include: {
-                model: models.movie,
-                as: 'movies',
-                attributes: ['id', 'title']
-            }
-        });
-        if (genre) {
-            res.status(200).json(genre.movies);
-        } else {
-            res.status(404).json({ error: 'Genre not found' });
+    const genre = await models.genre.findByPk(genreId, {
+        include: {
+            model: models.movie,
+            as: 'movies',
+            attributes: ['id', 'title']
         }
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching movies for genre', details: error.message });
+    });
+    if (genre) {
+        res.status(200).json(genre.movies);
+    } else {
+        res.status(404).json({ error: 'No se encontró el género.' });
     }
-}
+});
 
-module.exports = {
-    getAll,
-    getById,
-    listMovies,
-};
+module.exports = router;

@@ -1,97 +1,82 @@
+const express = require('express');
 const { models } = require('../../sequelize');
-const { getIdParam } = require('../helpers');
+const router = express.Router();
 
-async function getAll(req, res) {
+router.get('/getWatchlist', async (req, res) => {
     const userId = req.user.id;
-    try {
-        const watchlist = await models.watchlist.findOne({ 
-            where: { userId },
-            include: {
-                model: models.movie,
-                as: 'movies',
-                attributes: ['id', 'title']
+    const watchlist = await models.watchlist.findOne({
+        where: { userId },
+        include: {
+            model: models.movie,
+            as: 'movies',
+            attributes: ['id', 'title']
             }
         });
-        if (watchlist) {
-            res.status(200).json(watchlist.movies);
-        } else {
-            res.status(404).json({ error: 'Watchlist not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching watchlist', details: error.message});
+    if (watchlist) {
+        res.status(200).json(watchlist.movies);
+    } else {
+        res.status(404).send('No se encontró la watchlist.');
     }
-}
+});
 
-async function addMovie(req, res) {
+router.post('/addToWatchlist', async (req, res) => {
+    const userId = req.user.id;
+    const movieData = req.body.movie;
+
+    console.log(movieData)
+
+    if (!movieData || !movieData.id) {
+        return res.status(400).json({error: 'Datos de la película inválidos.'});
+    }
+
+    let movie = await models.movie.findByPk(movieData.id);
+    if (!movie) {
+        movie = await models.movie.create({
+            id: movieData.id,
+            title: movieData.title,
+            releaseDate: movieData.release_date,
+            poster: movieData.poster_path,
+            synopsis: movieData.overview,
+        });
+
+        if (movieData.genre_ids) {
+            const genres = await models.genre.findAll({where: {id: movieData.genre_ids}});
+            await movie.setGenres(genres);
+        }
+    }
+
+    const watchlist = await models.watchlist.findOrCreate({ where: { userId } });
+
+    console.log(watchlist);
+
+    const existingMovies = await watchlist.getMovies({where: {id: movieData.id}});
+    if (existingMovies.length) {
+        return res.status(400).json({error: 'La película ya está en la watchlist.'});
+    }
+
+    await watchlist.addMovie(movie.od);
+    res.status(201).json({message: 'Película agregada a Ver Más Tarde'});
+});
+
+router.delete('/removeFromWatchlist', async (req, res) => {
     const userId = req.user.id;
     const movieId = req.body.movieId;
 
-    try {
-        const watchlist = await models.watchlist.findOne({ where: { userId } });
-        const movie = await models.movie.findByPk(movieId);
-
-        if (!watchlist || !movie) {
-        return res.status(404).json({ error: 'Watchlist or movie not found' });
+    if (!movieId) {
+        return res.status(400).json({error: 'Debe proporcionar el ID de la película.'});
     }
 
-        const moviesInWatchlist = await watchlist.getMovies ({where: {id: movieId}});
-        if (moviesInWatchlist.length) {
-        return res.status(400).json({error: 'Movie already in watchlist'});
+    const watchlist = await models.watchlist.findOne({ where: { userId } });
+    if (!watchlist) {
+        return res.status(404).send('No se encontró la watchlist.');
     }
 
-    await watchlist.addMovie(movie);
-    res.status(201).json({ message: 'Movie added to watchlist' });
-    } catch (error) {
-        res.status(500).json({error: 'Error adding movie to watchlist', details: error.message});
+    const moviesInWatchlist = await watchlist.getMovies({ where: { id: movieId } });
+    if (!moviesInWatchlist.length) {
+        return res.status(400).send('La película no se encuentra en la watchlist.');
     }
-}
+    await watchlist.removeMovie(moviesInWatchlist[0]);
+    res.status(200).end();
+});
 
-async function listMovies(req, res) {
-    const userId = req.user.id;
-    try {
-        const watchlist = await models.watchlist.findOne({
-            where: { userId },
-            include: {
-                model: models.movie,
-                as: 'movies',
-                attributes: ['id', 'title']
-            }
-        });
-        if (watchlist) {
-            res.status(200).json(watchlist.movies);
-        } else {
-            res.status(404).json({ error: 'Watchlist not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching movies in watchlist', details: error.message });
-    }
-}
-
-async function remove(req, res) {
-    const userId = req.user.id;
-    const movieId = req.body.movieId;
-
-    try {
-        const watchlist = await models.watchlist.findOne({ where: { userId } });
-        if (!watchlist) {
-            return res.status(404).json({ error: 'Watchlist not found' });
-        }
-
-        const moviesInWatchlist = await watchlist.getMovies({ where: { id: movieId } });
-        if (!moviesInWatchlist.length) {
-            return res.status(400).json({ error: 'Movie not found in watchlist' });
-        }
-
-        await watchlist.removeMovie(moviesInWatchlist[0]);
-        res.status(200).json({ message: 'Movie removed from watchlist' });
-    } catch (error) {
-        res.status(500).json({ error: 'Error removing movie from watchlist', details: error.message });
-    }
-}
-
-module.exports = {
-    getAll,
-    addMovie,
-    listMovies,
-    remove,
-};
+module.exports = router;
