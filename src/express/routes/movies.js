@@ -89,4 +89,31 @@ router.post('/:movieId/addToWatchlist', async (req, res) => {
     res.status(201).json({message: 'Película agregada a Ver Más Tarde'});
 });
 
+router.post('/:movieId/addLog', async (req, res) => {
+    const userId = req.user.id;
+    const movieId = req.params.movieId;
+    const {review, rating} = req.body;
+
+    let movie = await models.movie.findByPk(movieId);
+    if (!movie) {
+        const movieData = req.body.movie;
+        movie = await models.movie.create({
+            id: movieData.id,
+            title: movieData.title,
+            releaseDate: movieData.releaseDate,
+            poster: movieData.poster,
+            synopsis: movieData.synopsis,
+        });
+
+        if (movieData.genre_ids) {
+            const genres = await models.genre.findAll({where: {id: movieData.genre_ids}});
+            await movie.setGenres(genres);
+        }
+    }
+
+    const log = await models.log.create({userId, movieId, review, rating});
+
+    res.status(201).json(log);
+});
+
 module.exports = router;

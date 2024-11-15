@@ -20,6 +20,7 @@ router.get('/getUser/:id', async (req, res) => {
 });
 
 router.post('/newUser', async (req, res) => {
+    const email = req.body.email;
     const existingUser = await models.user.findOne({where: {email}});
     if (existingUser) {
         return res.status(400).json({error: 'El email ya está registrado.'})

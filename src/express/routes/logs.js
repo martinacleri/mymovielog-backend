@@ -32,16 +32,6 @@ router.get('/getLog/:id', async (req, res) => {
     }
 });
 
-router.post('/newLog', async (req, res) => {
-    const {userId, movieId, review, rating} = req.body;
-    if (req.body.id) {
-        res.status(400).send('Solicitud incorrecta: no proporcione un ID, la base de datos lo determinará automáticamente.');
-    } else {
-        await models.log.create({userId, movieId, review, rating});
-        res.status(201).end();
-    }
-});
-
 router.put('/updateLog/:id', async (req, res) => {
     const id = getIdParam(req);
     if (req.body.id === id) {
