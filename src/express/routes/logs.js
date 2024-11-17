@@ -50,10 +50,16 @@ router.put('/updateLog/:id', async (req, res) => {
     }
 });
 
-router.delete('/deleteLog/:id', async (req, res) => {
-    const id = getIdParam(req);
-    await models.log.destroy({where: {id}});
-    res.status(200).end();
+router.delete('/deleteLog/:logId', async (req, res) => {
+    const userId = req.user.id;
+    const {logId} = req.params;
+
+    const log = await models.log.findOne({where: {id: logId, userId}});
+    if (!log) {
+        return res.status(404).json({error: 'Log no encontrado o no autorizado.'});
+    }
+    await log.destroy();
+    return res.status(200).json({message: 'Log eliminado con éxito.'});
 });
 
 module.exports = router;

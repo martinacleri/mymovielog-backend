@@ -62,23 +62,26 @@ router.post('/addToWatchlist', async (req, res) => {
 
 router.delete('/removeFromWatchlist', async (req, res) => {
     const userId = req.user.id;
-    const movieId = req.body.movieId;
+    const {movieId} = req.body;
 
     if (!movieId) {
         return res.status(400).json({error: 'Debe proporcionar el ID de la película.'});
     }
 
-    const watchlist = await models.watchlist.findOne({ where: { userId } });
-    if (!watchlist) {
-        return res.status(404).send('No se encontró la watchlist.');
+    const entry = await models.watchlist.findOne({
+        where: {userId, movieId},
+    });
+    if (!entry) {
+        return res.status(404).json({error: 'La película no está en ver más tarde.'});
     }
-
-    const moviesInWatchlist = await watchlist.getMovies({ where: { id: movieId } });
-    if (!moviesInWatchlist.length) {
-        return res.status(400).send('La película no se encuentra en la watchlist.');
-    }
-    await watchlist.removeMovie(moviesInWatchlist[0]);
-    res.status(200).end();
+    
+    await models.watchlist.destroy({
+        where: {
+            userId,
+            movieId,
+        },
+    });
+    return res.status(200).json({message: 'Película eliminada de ver más tarde con éxito.'});
 });
 
 module.exports = router;
