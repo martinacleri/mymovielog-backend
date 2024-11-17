@@ -12,14 +12,13 @@ router.get('/getLogs', async (req, res) => {
                 model: models.movie,
                 as: 'loggedMovies',
                 through: {
-                    attributes: ['review', 'rating'],
+                    attributes: ['id', 'review', 'rating'],
                 },
                 attributes: ['id', 'title', 'releaseDate', 'poster', 'synopsis'],
             },
         ],
         attributes: [],
     });
-    console.log(JSON.stringify(logs, null, 2));
     res.status(200).json(logs.loggedMovies);
 });
 
@@ -50,15 +49,29 @@ router.put('/updateLog/:id', async (req, res) => {
     }
 });
 
-router.delete('/deleteLog/:logId', async (req, res) => {
+router.delete('/deleteLog', async (req, res) => {
     const userId = req.user.id;
-    const {logId} = req.params;
+    const {logId} = req.body;
 
-    const log = await models.log.findOne({where: {id: logId, userId}});
-    if (!log) {
-        return res.status(404).json({error: 'Log no encontrado o no autorizado.'});
+    if (!logId) {
+        return res.status(400).json({error: 'Debe proporcionar el ID del log.'});
     }
-    await log.destroy();
+
+    const entry = await models.log.findOne({
+        where: {
+            id: logId,
+            userId,
+        },
+    });
+
+    if (!entry) {
+        return res.status(404).json({error: 'No se encontró el log para este usuario.'});
+    }
+    await models.log.destroy({
+        where: {
+            id: logId,
+        },
+    });
     return res.status(200).json({message: 'Log eliminado con éxito.'});
 });
 
