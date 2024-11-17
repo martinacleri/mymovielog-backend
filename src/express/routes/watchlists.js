@@ -4,19 +4,21 @@ const router = express.Router();
 
 router.get('/getWatchlist', async (req, res) => {
     const userId = req.user.id;
-    const watchlist = await models.watchlist.findOne({
-        where: { userId },
+    const watchlist = await models.movie.findAll({
         include: {
-            model: models.movie,
-            as: 'movies',
-            attributes: ['id', 'title']
-            }
+            model: models.user,
+            as: 'watchlistUsers',
+            through: {attributes: []},
+            where: {id: userId},
+            attributes: []
+            },
+            attributes: ['id', 'title', 'releaseDate', 'poster', 'synopsis']
         });
-    if (watchlist) {
-        res.status(200).json(watchlist.movies);
-    } else {
-        res.status(404).send('No se encontró la watchlist.');
+    if (watchlist.length === 0) {
+        return res.status(404).json({message: 'No se encontraron películas para ver más tarde.'});
     }
+
+    res.status(200).json(watchlist);
 });
 
 router.post('/addToWatchlist', async (req, res) => {

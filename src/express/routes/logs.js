@@ -5,14 +5,22 @@ const router = express.Router();
 
 router.get('/getLogs', async (req, res) => {
     const userId = req.user.id;
-    const logs = await models.log.findAll({
-        where: {userId},
+    const logs = await models.user.findOne({
+        where: {id: userId},
         include: [
-            {model: models.user, as: 'user', attributes: ['id', 'username']},
-            {model: models.movie, as: 'movie', attributes: ['id', 'title']}
-        ]
+            {
+                model: models.movie,
+                as: 'loggedMovies',
+                through: {
+                    attributes: ['review', 'rating'],
+                },
+                attributes: ['id', 'title', 'releaseDate', 'poster', 'synopsis'],
+            },
+        ],
+        attributes: [],
     });
-    res.status(200).json(logs);
+    console.log(JSON.stringify(logs, null, 2));
+    res.status(200).json(logs.loggedMovies);
 });
 
 router.get('/getLog/:id', async (req, res) => {
