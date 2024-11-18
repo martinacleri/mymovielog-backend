@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { models, sequelize } = require('./src/sequelize');
+const { models, sequelize } = require('./sequelize');
 
 const TMDB_API_KEY = 'dedd52875c3bee8da75e4103c138ab51';
 

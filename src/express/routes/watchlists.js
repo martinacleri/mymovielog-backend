@@ -4,19 +4,28 @@ const router = express.Router();
 
 router.get('/getWatchlist', async (req, res) => {
     const userId = req.user.id;
+    const {genreId} = req.query;
+    
+    const whereClause = genreId ? {id: genreId} : {};
+
     const watchlist = await models.movie.findAll({
-        include: {
+        include: [
+            {
             model: models.user,
             as: 'watchlistUsers',
             through: {attributes: []},
             where: {id: userId},
-            attributes: []
+            attributes: [],
             },
-            attributes: ['id', 'title', 'releaseDate', 'poster', 'synopsis']
+            {
+                model: models.genre,
+                attributes: ['id','genreName'],
+                where: whereClause,
+                through: {attributes: []},
+            },
+        ],
+        attributes: ['id', 'title', 'releaseDate', 'poster', 'synopsis']
         });
-    if (watchlist.length === 0) {
-        return res.status(404).json({message: 'No se encontraron películas para ver más tarde.'});
-    }
 
     res.status(200).json(watchlist);
 });
@@ -25,7 +34,8 @@ router.post('/addToWatchlist', async (req, res) => {
     const userId = req.user.id;
     const movieData = req.body.movie;
 
-    console.log(movieData)
+    console.log(movieData);
+    console.log('Géneros proporcionados por TMDB:', movieData.genre_ids);
 
     if (!movieData || !movieData.id) {
         return res.status(400).json({error: 'Datos de la película inválidos.'});
@@ -41,22 +51,27 @@ router.post('/addToWatchlist', async (req, res) => {
             synopsis: movieData.overview,
         });
 
-        if (movieData.genre_ids) {
+        if (movieData.genre_ids && movieData.genre_ids.length > 0) {
             const genres = await models.genre.findAll({where: {id: movieData.genre_ids}});
-            await movie.setGenres(genres);
+            console.log('Géneros encontrados:', genres.map(g => g.toJSON()));
+            if (genres.length > 0) {
+                await movie.setGenres(genres);
+            }
         }
     }
 
-    const watchlist = await models.watchlist.findOrCreate({ where: { userId } });
+    const associatedGenres = await movie.getGenres();
+    console.log('Géneros asociados a la película:', associatedGenres.map(g => g.toJSON()));
 
-    console.log(watchlist);
 
-    const existingMovies = await watchlist.getMovies({where: {id: movieData.id}});
+    const user = await models.user.findByPk(userId);
+
+    const existingMovies = await user.getMovies({where: {id: movieData.id}});
     if (existingMovies.length) {
-        return res.status(400).json({error: 'La película ya está en la watchlist.'});
+        return res.status(400).json({message: 'La película ya está en la watchlist.'});
     }
 
-    await watchlist.addMovie(movie.od);
+    await user.addMovie(movie);
     res.status(201).json({message: 'Película agregada a Ver Más Tarde'});
 });
 

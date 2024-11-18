@@ -4,7 +4,13 @@ const { getIdParam } = require('../helpers');
 const router = express.Router();
 
 router.get('/getGenres', async (req, res) => {
-    const genres = await models.genre.findAll();
+    const genres = await models.genre.findAll({
+        attributes: ['id','genreName'],
+    });
+
+    if (!genres || genres.length === 0) {
+        return res.status(200).json([]);
+    }
     res.status(200).json(genres);
 });
 

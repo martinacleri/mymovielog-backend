@@ -5,6 +5,10 @@ const router = express.Router();
 
 router.get('/getLogs', async (req, res) => {
     const userId = req.user.id;
+    const {genreId} = req.query;
+
+    const genreFilter = genreId ? {id: genreId} : null;
+
     const logs = await models.user.findOne({
         where: {id: userId},
         include: [
@@ -15,6 +19,14 @@ router.get('/getLogs', async (req, res) => {
                     attributes: ['id', 'review', 'rating'],
                 },
                 attributes: ['id', 'title', 'releaseDate', 'poster', 'synopsis'],
+                include: [
+                    {
+                        model: models.genre,
+                        where: genreFilter,
+                        required: !!genreId,
+                        attributes: [],
+                    },
+                ],
             },
         ],
         attributes: [],
